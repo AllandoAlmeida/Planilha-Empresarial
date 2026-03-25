@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificar Estoque</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h2 { margin-bottom: 20px; }
+    button { font-size: 16px; padding: 8px 12px; margin-bottom: 10px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 14px; }
+    th { background-color: #007bff; color: #fff; }
+    input[type="text"] { padding: 5px; width: 80px; }
+    .btn { padding: 5px 10px; font-size: 14px; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <h2>Estoque dos Produtos</h2>
+  <button onclick="buscarEstoque()">Conferir Estoque</button>
+  <div id="resultados"></div>
+
+  <script>
+    function buscarEstoque() {
+      google.script.run.withSuccessHandler(function(result) {
+        var div = document.getElementById("resultados");
+        if (!result || result.length === 0) {
+          div.innerHTML = "<p>Nenhum produto encontrado.</p>";
+          return;
+        }
+        // Monta a tabela com as colunas: Descrição, Preço, Estoque atual, Novo Estoque e Ação
+        var html = "<table><thead><tr><th>Descrição</th><th>Preço</th><th>Estoque Atual</th><th>Qtd. Atual</th><th>Ação</th></tr></thead><tbody>";
+        result.forEach(function(prod) {
+          html += "<tr>";
+          html += "<td>" + prod.descricao + "</td>";
+          html += "<td>R$ " + prod.preco.toFixed(2) + "</td>";
+          html += "<td>" + prod.estoque + "</td>";
+          // Campo de entrada para a nova quantidade, pré-preenchido com o valor atual
+          html += "<td><input type='text' id='novoEstoque_" + prod.descricao.replace(/\s/g, "") + "' value='" + prod.estoque + "' /></td>";
+          // Botão para atualizar o estoque, passando a descrição e o novo valor
+          html += "<td><button class='btn' onclick='atualizarEstoque(\"" + prod.descricao.replace(/"/g, "&quot;") + "\")'>Atualizar</button></td>";
+          html += "</tr>";
+        });
+        html += "</tbody></table>";
+        div.innerHTML = html;
+      }).obterEstoqueProdutos();
+    }
+    
+    function atualizarEstoque(produto) {
+      // Recupera o novo valor do input correspondente (removendo espaços do produto para formar o ID)
+      var idInput = "novoEstoque_" + produto.replace(/\s/g, "");
+      var novoValor = document.getElementById(idInput).value;
+      novoValor = parseFloat(novoValor);
+      if (isNaN(novoValor)) {
+        alert("Por favor, insira um valor numérico válido.");
+        return;
+      }
+      
+      google.script.run.withSuccessHandler(function(msg) {
+        alert(msg);
+        // Atualiza a tabela após a alteração
+        buscarEstoque();
+      }).updateEstoqueProduto(produto, novoValor);
+    }
+    
+    // Carrega o estoque assim que a página carrega
+    window.onload = buscarEstoque;
+  </script>
+</body>
+</html>

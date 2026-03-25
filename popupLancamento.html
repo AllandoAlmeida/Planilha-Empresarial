@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Lançamento Financeiro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px;
+      text-align: center;
+    }
+    h3 {
+      color: #444;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: bold;
+    }
+    select, input, button {
+      width: 90%;
+      padding: 10px;
+      margin: 8px auto;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      box-sizing: border-box;
+      display: block;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h3>Lançamento Financeiro</h3>
+  <form id="formLancamento">
+    <label for="data">Data:</label>
+    <input type="date" id="data" required>
+
+    <label for="descricao">Descrição:</label>
+    <input type="text" id="descricao" required>
+
+    <label for="categoria">Categoria:</label>
+    <select id="categoria" required>
+      <option value="">Carregando categorias...</option>
+    </select>
+
+    <label for="valor">Valor:</label>
+    <input type="number" id="valor" step="0.01" required>
+
+    <label for="tipoLancamento">Tipo de Lançamento:</label>
+    <select id="tipoLancamento" required>
+      <option value="">Selecione...</option>
+      <option value="Receita">Receita</option>
+      <option value="Despesa">Despesa</option>
+    </select>
+
+    <label for="status">Status:</label>
+    <select id="status" required>
+      <option value="">Selecione...</option>
+      <option value="Em aberto">Em aberto</option>
+      <option value="Pago">Pago</option>
+    </select>
+
+    <label for="tipoPagamento">Tipo de Pagamento:</label>
+    <select id="tipoPagamento" required>
+      <option value="">Carregando tipos de pagamento...</option>
+    </select>
+
+    <!-- Se não for Crédito, exibe o campo Banco -->
+    <div id="divBancos" class="hidden">
+      <label for="banco">Banco:</label>
+      <select id="banco">
+        <option value="">Carregando bancos...</option>
+      </select>
+    </div>
+
+    <!-- Se for Crédito, exibe os cartões e campos de parcelas -->
+    <div id="divCredito" class="hidden">
+      <label for="cartaoCredito">Cartão de Crédito:</label>
+      <select id="cartaoCredito">
+         <option value="">Carregando cartões...</option>
+      </select>
+      <label for="parcelas">Número de Parcelas:</label>
+      <input type="number" id="parcelas" min="1" value="1">
+      <label for="valorTotal">Valor Total da Compra:</label>
+      <input type="number" id="valorTotal" step="0.01" placeholder="Digite o valor total">
+    </div>
+
+    <button type="submit">Salvar Lançamento</button>
+  </form>
+
+  <script>
+    // Carrega as categorias
+    function carregarCategorias() {
+      google.script.run.withSuccessHandler(function(categorias) {
+        var select = document.getElementById("categoria");
+        select.innerHTML = "";
+        categorias.forEach(function(cat) {
+          var option = document.createElement("option");
+          option.value = cat;
+          option.textContent = cat;
+          select.appendChild(option);
+        });
+      }).obterCategorias();
+    }
+
+    // Carrega os bancos
+    function carregarBancos() {
+      google.script.run.withSuccessHandler(function(bancos) {
+        var select = document.getElementById("banco");
+        select.innerHTML = "";
+        bancos.forEach(function(banco) {
+          var option = document.createElement("option");
+          option.value = banco;
+          option.textContent = banco;
+          select.appendChild(option);
+        });
+      }).obterBancos();
+    }
+
+    // Carrega os cartões de crédito
+    function carregarCartoesCredito() {
+      google.script.run.withSuccessHandler(function(cartoes) {
+        var select = document.getElementById("cartaoCredito");
+        select.innerHTML = "";
+        if (cartoes.length === 0) {
+          var option = document.createElement("option");
+          option.value = "";
+          option.textContent = "Nenhum cartão disponível";
+          select.appendChild(option);
+        } else {
+          cartoes.forEach(function(cartao) {
+            var option = document.createElement("option");
+            option.value = cartao;
+            option.textContent = cartao;
+            select.appendChild(option);
+          });
+        }
+      }).obterCartoesCredito();
+    }
+
+    // Carrega os tipos de pagamento
+    function carregarTiposPagamento() {
+      google.script.run.withSuccessHandler(function(tipos) {
+        var select = document.getElementById("tipoPagamento");
+        select.innerHTML = "";
+        var defOption = document.createElement("option");
+        defOption.value = "";
+        defOption.textContent = "Selecione...";
+        select.appendChild(defOption);
+        tipos.forEach(function(tipo) {
+          var option = document.createElement("option");
+          option.value = tipo;
+          option.textContent = tipo;
+          select.appendChild(option);
+        });
+      }).obterTiposPagamento();
+    }
+
+    // Atualiza os campos quando o tipo de pagamento é alterado
+    document.getElementById("tipoPagamento").addEventListener("change", function() {
+      var tipo = this.value;
+      var divCredito = document.getElementById("divCredito");
+      var divBancos = document.getElementById("divBancos");
+      var status = document.getElementById("status").value;
+      if (tipo === "Crédito") {
+        divCredito.classList.remove("hidden");
+        divBancos.classList.add("hidden");
+        carregarCartoesCredito();
+      } else {
+        divCredito.classList.add("hidden");
+        // Se o status for "Pago" ou "Em aberto", mostra o campo banco
+        if ((status === "Pago" || status === "Em aberto") && tipo !== "Crédito") {
+          divBancos.classList.remove("hidden");
+          carregarBancos();
+        } else {
+          divBancos.classList.add("hidden");
+        }
+      }
+    });
+
+    // Atualiza os campos quando o status é alterado
+    document.getElementById("status").addEventListener("change", function() {
+      var status = this.value;
+      var divBancos = document.getElementById("divBancos");
+      var tipoPagamento = document.getElementById("tipoPagamento").value;
+      if ((status === "Pago" || status === "Em aberto") && tipoPagamento !== "Crédito") {
+        divBancos.classList.remove("hidden");
+        carregarBancos();
+      } else {
+        divBancos.classList.add("hidden");
+      }
+    });
+
+    // Evento de submit do formulário
+    document.getElementById("formLancamento").addEventListener("submit", function(e) {
+      e.preventDefault();
+      var status = document.getElementById("status").value;
+      var tipoPagamento = document.getElementById("tipoPagamento").value;
+      var banco = document.getElementById("banco").value;
+      if ((status === "Pago" || status === "Em aberto") && tipoPagamento !== "Crédito" && banco === "") {
+          alert("Por favor, selecione um banco para a transação.");
+          return;
+      }
+      var dados = {
+        data: document.getElementById("data").value,
+        descricao: document.getElementById("descricao").value,
+        categoria: document.getElementById("categoria").value,
+        valor: document.getElementById("valor").value,
+        tipoLancamento: document.getElementById("tipoLancamento").value,
+        status: document.getElementById("status").value,
+        tipoPagamento: document.getElementById("tipoPagamento").value,
+        banco: document.getElementById("banco").value,
+        cartaoCredito: document.getElementById("cartaoCredito").value,
+        parcelas: document.getElementById("parcelas").value,
+        valorTotal: document.getElementById("valorTotal").value
+      };
+      console.log("Dados a serem enviados:", dados);
+      google.script.run.withSuccessHandler(function(msg) {
+        alert(msg);
+        google.script.host.close();
+      }).salvarLancamento(dados);
+    });
+
+    // Carrega as categorias e os tipos de pagamento ao carregar a página
+    document.addEventListener("DOMContentLoaded", function() {
+      carregarCategorias();
+      carregarTiposPagamento();
+    });
+  </script>
+</body>
+</html>

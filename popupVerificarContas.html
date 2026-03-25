@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Verificar Contas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px;
+      text-align: center;
+    }
+    h2 {
+      color: #444;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: boald;
+    }
+    select, button {
+      width: 90%;
+      padding: 10px;
+      margin: 8px auto;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      box-sizing: border-box;
+      display: block;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    table {
+      width: 90%;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h2>Verificar Contas</h2>
+  
+  <label for="tipo">Tipo de Lançamento (opcional):</label>
+  <select id="tipo">
+    <option value="">Todos</option>
+    <option value="Receita">Receita</option>
+    <option value="Despesa">Despesa</option>
+  </select>
+  
+  <label for="mes">Selecione o Mês:</label>
+  <select id="mes">
+    <option value="1">Janeiro</option>
+    <option value="2">Fevereiro</option>
+    <option value="3">Março</option>
+    <option value="4">Abril</option>
+    <option value="5">Maio</option>
+    <option value="6">Junho</option>
+    <option value="7">Julho</option>
+    <option value="8">Agosto</option>
+    <option value="9">Setembro</option>
+    <option value="10">Outubro</option>
+    <option value="11">Novembro</option>
+    <option value="12">Dezembro</option>
+  </select>
+  
+  <label for="ano">Selecione o Ano:</label>
+  <select id="ano">
+    <option value="2025">2025</option>
+    <option value="2026">2026</option>
+    <option value="2027">2027</option>
+    <option value="2028">2028</option>
+    <option value="2029">2029</option>
+    <option value="2030">2030</option>
+  </select>
+  
+  <button onclick="buscar()">Buscar Contas</button>
+  
+  <div id="resultado"></div>
+  
+  <script>
+    function buscar() {
+      var tipo = document.getElementById("tipo").value;
+      var mes = document.getElementById("mes").value;
+      var ano = document.getElementById("ano").value;
+      google.script.run.withSuccessHandler(function(html) {
+        document.getElementById("resultado").innerHTML = html;
+      }).buscarContas(tipo, mes, ano);
+    }
+  </script>
+</body>
+</html>

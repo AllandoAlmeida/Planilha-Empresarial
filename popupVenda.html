@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Realizar Venda - Múltiplos Produtos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Reset básico */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: linear-gradient(135deg, #74ABE2, #5563DE);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background-color: #fff;
+      max-width: 800px;
+      width: 100%;
+      padding: 40px 50px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      text-align: center;
+    }
+    h2 {
+      color: #333;
+      margin-bottom: 25px;
+      font-size: 24px;
+    }
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      font-weight: bold;
+      text-align: left;
+      font-size: 16px;
+      color: #555;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    /* Estilo específico para o select de produto (maior e mais destacado) */
+    .select-produto {
+      min-height: 60px;
+      font-size: 18px;
+      padding: 16px;
+    }
+    .flex-row {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .flex-row > div {
+      flex: 1;
+    }
+    .item-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .item-table th, .item-table td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .item-table th {
+      background-color: #007bff;
+      color: #fff;
+    }
+    .btn {
+      background-color: #007bff;
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 12px;
+      transition: background-color 0.3s ease;
+    }
+    .btn:hover {
+      background-color: #0056b3;
+    }
+    .btn-remover {
+      background-color: #dc3545;
+      font-size: 14px;
+      padding: 8px;
+    }
+    /* Estilo para seções condicionais */
+    .condicional {
+      display: none;
+    }
+    #mensagem {
+      display: none;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Realizar Venda</h2>
+    <!-- Área de mensagem para feedback -->
+    <div id="mensagem"></div>
+    <form id="formVenda">
+      <!-- Cabeçalho da venda -->
+      <label for="cliente">Cliente:</label>
+      <select id="cliente" required>
+        <option value="">Carregando clientes...</option>
+      </select>
+      
+      <label for="dataVenda">Data da Venda:</label>
+      <input type="date" id="dataVenda">
+      
+      <label for="tipoPagamento">Tipo de Pagamento:</label>
+      <select id="tipoPagamento" required>
+        <option value="">Selecione...</option>
+        <option value="Dinheiro">Dinheiro</option>
+        <option value="Cartão">Cartão</option>
+        <option value="Transferência">Transferência</option>
+        <option value="Boleto">Boleto</option>
+      </select>
+      
+      <!-- Campos condicionais para detalhes de pagamento -->
+      <div id="secaoCartao" class="condicional">
+        <label for="cartao">Selecione o Cartão:</label>
+        <select id="cartao">
+          <option value="">Carregando cartões...</option>
+        </select>
+      </div>
+      <div id="secaoBanco" class="condicional">
+        <label for="banco">Selecione o Banco:</label>
+        <select id="banco">
+          <option value="">Carregando bancos...</option>
+        </select>
+      </div>
+      
+      <label for="vencimento">Vencimento:</label>
+      <input type="date" id="vencimento">
+      
+      <!-- Novo campo para status da venda -->
+      <label for="statusVenda">Status da Venda:</label>
+      <select id="statusVenda" required>
+        <option value="">Selecione...</option>
+        <option value="Pago">Pago</option>
+        <option value="Em Aberto">Em Aberto</option>
+      </select>
+      
+      <!-- Seção de Itens da Venda -->
+      <h3 style="margin-bottom: 15px;">Itens da Venda</h3>
+      <table class="item-table" id="tabelaItens">
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Quantidade</th>
+            <th>Valor Unitário</th>
+            <th>Total</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyItens">
+          <!-- Linhas serão adicionadas dinamicamente -->
+        </tbody>
+      </table>
+      <!-- Botão de adicionar item com id para controle -->
+      <button id="btnAdicionarItem" type="button" class="btn" onclick="adicionarItem()">Adicionar Item</button>
+      
+      <button type="submit" class="btn">Registrar Venda</button>
+    </form>
+  </div>
+  
+  <script>
+    var produtosArray = [];
+    var clientesArray = [];
+    
+    // Carrega os produtos da aba "Produtos e Serviços"
+    function carregarProdutos() {
+      document.getElementById("btnAdicionarItem").disabled = true;
+      google.script.run
+        .withSuccessHandler(function(produtos) {
+          produtosArray = produtos;
+          var selects = document.querySelectorAll(".select-produto");
+          selects.forEach(function(select) {
+            select.innerHTML = "<option value=''>Selecione o produto</option>";
+            produtos.forEach(function(prod) {
+              var option = document.createElement("option");
+              option.value = prod.descricao;
+              option.textContent = prod.descricao + " (Estoque: " + prod.estoque + ")";
+              select.appendChild(option);
+            });
+          });
+          document.getElementById("btnAdicionarItem").disabled = false;
+        })
+        .withFailureHandler(function(error) {
+          alert("Erro ao carregar produtos: " + error.message);
+        })
+        .obterProdutos();
+    }
+    
+    // Carrega os clientes da aba "Clientes"
+    function carregarClientes() {
+      google.script.run
+        .withSuccessHandler(function(clientes) {
+          clientesArray = clientes;
+          var select = document.getElementById("cliente");
+          select.innerHTML = "<option value=''>Selecione o cliente</option>";
+          clientes.forEach(function(cli) {
+            var option = document.createElement("option");
+            option.value = cli.nome;
+            option.textContent = cli.nome;
+            select.appendChild(option);
+          });
+        })
+        .withFailureHandler(function(error) {
+          alert("Erro ao carregar clientes: " + error.message);
+        })
+        .obterClientes();
+    }
+    
+    // Carrega os cartões (para a opção Cartão)
+    function carregarCartoes() {
+      google.script.run
+        .withSuccessHandler(function(cartoes) {
+          var select = document.getElementById("cartao");
+          select.innerHTML = "<option value=''>Selecione o cartão</option>";
+          cartoes.forEach(function(cartao) {
+            var option = document.createElement("option");
+            option.value = cartao;
+            option.textContent = cartao;
+            select.appendChild(option);
+          });
+        })
+        .withFailureHandler(function(error) {
+          alert("Erro ao carregar cartões: " + error.message);
+        })
+        .obterCartoesCredito();
+    }
+    
+    // Carrega os bancos (para Transferência ou Boleto)
+    function carregarBancos() {
+      google.script.run
+        .withSuccessHandler(function(bancos) {
+          var select = document.getElementById("banco");
+          select.innerHTML = "<option value=''>Selecione o banco</option>";
+          bancos.forEach(function(banco) {
+            var option = document.createElement("option");
+            option.value = banco;
+            option.textContent = banco;
+            select.appendChild(option);
+          });
+        })
+        .withFailureHandler(function(error) {
+          alert("Erro ao carregar bancos: " + error.message);
+        })
+        .obterBancos();
+    }
+    
+    // Mostra ou oculta os campos de detalhes de pagamento conforme o tipo selecionado
+    document.getElementById("tipoPagamento").addEventListener("change", function() {
+      var tipo = this.value;
+      var secaoCartao = document.getElementById("secaoCartao");
+      var secaoBanco = document.getElementById("secaoBanco");
+      if (tipo === "Cartão") {
+        secaoCartao.style.display = "block";
+        secaoBanco.style.display = "none";
+        carregarCartoes();
+      } else if (tipo === "Transferência" || tipo === "Boleto") {
+        secaoBanco.style.display = "block";
+        secaoCartao.style.display = "none";
+        carregarBancos();
+      } else {
+        secaoCartao.style.display = "none";
+        secaoBanco.style.display = "none";
+      }
+    });
+    
+    // Atualiza o Valor Unitário ao selecionar o produto e recalcula o total da linha
+    function atualizarValorUnitario(selectElement) {
+      var prodDescricao = selectElement.value;
+      var row = selectElement.parentElement.parentElement;
+      var valorInput = row.querySelector(".input-valorUnitario");
+      var prod = produtosArray.find(function(p) {
+        return p.descricao === prodDescricao;
+      });
+      if (prod) {
+        valorInput.value = parseFloat(prod.precoUnitario).toFixed(2);
+      } else {
+        valorInput.value = "";
+      }
+      atualizarTotalLinha(row);
+    }
+    
+    // Atualiza o total de um item (quantidade x valor unitário)
+    function atualizarTotalLinha(row) {
+      var quantidade = parseFloat(row.querySelector(".input-quantidade").value) || 0;
+      var valorUnitario = parseFloat(row.querySelector(".input-valorUnitario").value) || 0;
+      var total = quantidade * valorUnitario;
+      row.querySelector(".input-total").value = total.toFixed(2);
+    }
+    
+    // Adiciona um novo item à tabela de itens
+    function adicionarItem() {
+      var tbody = document.getElementById("tbodyItens");
+      var row = document.createElement("tr");
+      row.innerHTML = `
+        <td>
+          <select class="select-produto" onchange="atualizarValorUnitario(this)" required>
+            <option value="">Selecione o produto</option>
+          </select>
+        </td>
+        <td>
+          <input type="number" class="input-quantidade" min="1" required oninput="atualizarTotalLinha(this.parentElement.parentElement)">
+        </td>
+        <td><input type="number" class="input-valorUnitario" step="0.01" readonly></td>
+        <td><input type="number" class="input-total" step="0.01" readonly></td>
+        <td><button type="button" class="btn btn-remover" onclick="removerItem(this)">Remover</button></td>
+      `;
+      tbody.appendChild(row);
+      var selectProd = row.querySelector(".select-produto");
+      produtosArray.forEach(function(prod) {
+        var option = document.createElement("option");
+        option.value = prod.descricao;
+        option.textContent = prod.descricao + " (Estoque: " + prod.estoque + ")";
+        selectProd.appendChild(option);
+      });
+    }
+    
+    // Remove um item da tabela
+    function removerItem(btn) {
+      var row = btn.parentNode.parentNode;
+      row.parentNode.removeChild(row);
+    }
+    
+    // Evento de submit do formulário
+    document.getElementById("formVenda").addEventListener("submit", function(e) {
+      e.preventDefault();
+      
+      var venda = {
+        cliente: document.getElementById("cliente").value,
+        dataVenda: document.getElementById("dataVenda").value,
+        tipoPagamento: document.getElementById("tipoPagamento").value,
+        pagamentoDetalhe: (document.getElementById("tipoPagamento").value === "Cartão") ? document.getElementById("cartao").value : 
+                           ((document.getElementById("tipoPagamento").value === "Transferência" || document.getElementById("tipoPagamento").value === "Boleto") ? document.getElementById("banco").value : ""),
+        vencimento: document.getElementById("vencimento").value,
+        statusVenda: document.getElementById("statusVenda").value,
+        itens: []
+      };
+      
+      var rows = document.querySelectorAll("#tbodyItens tr");
+      rows.forEach(function(row) {
+        var produto = row.querySelector(".select-produto").value;
+        var quantidade = row.querySelector(".input-quantidade").value;
+        var valorUnitario = row.querySelector(".input-valorUnitario").value;
+        var total = row.querySelector(".input-total").value;
+        venda.itens.push({
+          produto: produto,
+          quantidade: quantidade,
+          valorUnitario: valorUnitario,
+          valorTotal: total
+        });
+      });
+      
+      google.script.run
+        .withSuccessHandler(function(msg) {
+          var mensagemDiv = document.getElementById("mensagem");
+          mensagemDiv.style.display = "block";
+          mensagemDiv.textContent = msg;
+          setTimeout(function() {
+            google.script.host.close();
+          }, 2000);
+        })
+        .withFailureHandler(function(error) {
+          alert("Erro ao registrar a venda: " + error.message);
+        })
+        .registrarVendaMulti(venda);
+    });
+    
+    // Carrega clientes e produtos quando o documento é carregado
+    document.addEventListener("DOMContentLoaded", function() {
+      carregarClientes();
+      carregarProdutos();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultar Clientes</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    button { cursor: pointer; padding: 5px 10px; }
+  </style>
+</head>
+<body>
+  <h2>Clientes</h2>
+  <div id="tabelaClientes">Carregando...</div>
+
+  <script>
+    let clientes = []; // Variável global para armazenar os dados
+
+    // Função para carregar os clientes
+    function carregarClientes() {
+      google.script.run
+        .withSuccessHandler((dados) => {
+          clientes = dados; // Atualiza a variável global
+          const div = document.getElementById("tabelaClientes");
+          
+          if (!dados || dados.length === 0) {
+            div.innerHTML = "<p>Nenhum cliente encontrado.</p>";
+            return;
+          }
+          
+          let html = `
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>CPF/CNPJ</th>
+                  <th>Telefone</th>
+                  <th>Email</th>
+                  <th>Endereço</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          
+          dados.forEach((cliente, index) => {
+            html += `
+              <tr>
+                <td>${cliente[0]}</td>
+                <td>${cliente[1]}</td>
+                <td>${cliente[2]}</td>
+                <td>${cliente[3]}</td>
+                <td>${cliente[4]}</td>
+                <td><button onclick="editarCliente(${index})">Editar</button></td>
+              </tr>
+            `;
+          });
+          
+          html += "</tbody></table>";
+          div.innerHTML = html;
+        })
+        .withFailureHandler((erro) => {
+          console.error("Erro ao carregar dados:", erro);
+          alert("Erro ao carregar clientes!");
+        })
+        .buscarClientes();
+    }
+
+    // Função para editar cliente
+    function editarCliente(index) {
+      if (!clientes[index]) {
+        alert("Cliente não encontrado!");
+        return;
+      }
+      
+      const cliente = clientes[index];
+      const novosDados = {
+        nome: prompt("Nome:", cliente[0]),
+        cpfCnpj: prompt("CPF/CNPJ:", cliente[1]),
+        telefone: prompt("Telefone:", cliente[2]),
+        email: prompt("Email:", cliente[3]),
+        endereco: prompt("Endereço:", cliente[4])
+      };
+      
+      // Envia os dados atualizados para o Google Script
+      google.script.run
+        .withSuccessHandler(() => {
+          alert("Dados salvos com sucesso!");
+          carregarClientes(); // Recarrega a tabela
+        })
+        .withFailureHandler((erro) => {
+          alert("Erro ao salvar: " + erro.message);
+        })
+        .salvarCliente(index, [
+          novosDados.nome,
+          novosDados.cpfCnpj,
+          novosDados.telefone,
+          novosDados.email,
+          novosDados.endereco
+        ]);
+    }
+
+    // Carrega os dados ao abrir a página
+    window.onload = carregarClientes;
+  </script>
+</body>
+</html>

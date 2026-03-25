@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificar Vendas</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      padding: 20px; 
+      margin: 0;
+    }
+    h2, h3 { 
+      margin-bottom: 20px;
+      color: #333;
+    }
+    label {
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    button { 
+      padding: 10px 15px; 
+      font-size: 14px; 
+      margin: 10px 5px 10px 0;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #3367d6;
+    }
+    button.danger {
+      background-color: #dc3545;
+    }
+    button.danger:hover {
+      background-color: #c82333;
+    }
+    select {
+      padding: 8px;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    table { 
+      border-collapse: collapse; 
+      width: 100%; 
+      margin-top: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 12px; 
+      text-align: left; 
+      font-size: 14px; 
+    }
+    th { 
+      background-color: #4285f4; 
+      color: #fff; 
+      position: sticky;
+      top: 0;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+    .container {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(0,0,0,.3);
+      border-radius: 50%;
+      border-top-color: #4285f4;
+      animation: spin 1s ease-in-out infinite;
+      vertical-align: middle;
+      margin-left: 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .status-message {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .warning {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Verificar Vendas</h2>
+    <label for="mesFiltro">Filtrar por Mês:</label>
+    <select id="mesFiltro">
+      <option value="1">Janeiro</option>
+      <option value="2">Fevereiro</option>
+      <option value="3">Março</option>
+      <option value="4">Abril</option>
+      <option value="5">Maio</option>
+      <option value="6">Junho</option>
+      <option value="7">Julho</option>
+      <option value="8">Agosto</option>
+      <option value="9">Setembro</option>
+      <option value="10">Outubro</option>
+      <option value="11">Novembro</option>
+      <option value="12">Dezembro</option>
+    </select>
+    <button id="btnBuscar" onclick="buscarVendasFiltrado()">
+      <span id="btnText">Buscar Vendas</span>
+      <span id="btnLoader" class="loading" style="display:none;"></span>
+    </button>
+    
+    <div id="tabelaVendas"></div>
+    <div id="detalhesVenda"></div>
+    <div id="statusMessage" class="status-message" style="display:none;"></div>
+  </div>
+  
+  <script>
+    function buscarVendasFiltrado() {
+      const mes = parseInt(document.getElementById("mesFiltro").value);
+      const btn = document.getElementById('btnBuscar');
+      const btnText = document.getElementById('btnText');
+      const loader = document.getElementById('btnLoader');
+      
+      btn.disabled = true;
+      btnText.textContent = 'Carregando...';
+      loader.style.display = 'inline-block';
+      document.getElementById("statusMessage").style.display = 'none';
+      
+      google.script.run.withSuccessHandler(function(result) {
+        const div = document.getElementById("tabelaVendas");
+        document.getElementById("detalhesVenda").innerHTML = "";
+        
+        if (!result || result.length === 0) {
+          div.innerHTML = "<p>Nenhuma venda encontrada para o mês selecionado.</p>";
+        } else {
+          let html = "<table><thead><tr><th>Código</th><th>Data</th><th>Cliente</th><th>Total (R$)</th><th>Ações</th></tr></thead><tbody>";
+          result.forEach(function(row) {
+            html += "<tr>";
+            html += "<td>" + (row[0] || '-') + "</td>";
+            html += "<td>" + (row[1] || '-') + "</td>";
+            html += "<td>" + (row[2] || '-') + "</td>";
+            html += "<td>" + parseFloat(row[3]).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + "</td>";
+            html += `<td>
+              <button onclick='verificarVenda("${row[0]}")'>Detalhes</button>
+              <button onclick='confirmarExclusao("${row[0]}")' class="danger" style="margin-left:5px;">Excluir</button>
+            </td>`;
+            html += "</tr>";
+          });
+          html += "</tbody></table>";
+          div.innerHTML = html;
+        }
+        
+        btn.disabled = false;
+        btnText.textContent = 'Buscar Vendas';
+        loader.style.display = 'none';
+      })
+      .withFailureHandler(function(error) {
+        showMessage("Erro ao carregar vendas: " + error.message, "error");
+        btn.disabled = false;
+        btnText.textContent = 'Buscar Vendas';
+        loader.style.display = 'none';
+      })
+      .buscarVendas(mes);
+    }
+    
+    function verificarVenda(codigoVenda) {
+      const div = document.getElementById("detalhesVenda");
+      div.innerHTML = `
+        <div style="margin-bottom:15px;">
+          <h3 style="margin-bottom:5px;">Detalhes da Venda ${codigoVenda}</h3>
+          <button onclick="confirmarExclusao('${codigoVenda}')" class="danger">
+            Excluir Esta Venda
+          </button>
+        </div>
+        <div id="detalhesConteudo">Carregando...</div>
+      `;
+      
+      google.script.run.withSuccessHandler(function(detalhes) {
+        const conteudo = document.getElementById("detalhesConteudo");
+        
+        if (!detalhes || detalhes.length === 0) {
+          conteudo.innerHTML = "<p>Nenhum detalhe encontrado para esta venda.</p>";
+          return;
+        }
+        
+        let totalVenda = 0;
+        let html = "<table><thead><tr><th>Produto</th><th>Quantidade</th><th>Valor Unitário (R$)</th><th>Total (R$)</th></tr></thead><tbody>";
+        
+        detalhes.forEach(function(item) {
+          totalVenda += parseFloat(item[3] || 0);
+          html += "<tr>";
+          html += "<td>" + (item[0] || '-') + "</td>";
+          html += "<td>" + (item[1] || '-') + "</td>";
+          html += "<td>" + (item[2] || '-') + "</td>";
+          html += "<td>" + (item[3] || '-') + "</td>";
+          html += "</tr>";
+        });
+        
+        html += `
+            <tr style="font-weight:bold;">
+              <td colspan="3">Total da Venda</td>
+              <td>${totalVenda.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>`;
+        
+        conteudo.innerHTML = html;
+      })
+      .withFailureHandler(function(error) {
+        document.getElementById("detalhesConteudo").innerHTML = 
+          `<p class="error">Erro ao carregar detalhes: ${error.message}</p>`;
+      })
+      .detalhesVenda(codigoVenda);
+    }
+    
+    function confirmarExclusao(codigoVenda) {
+      if (confirm(`Tem certeza que deseja excluir a venda ${codigoVenda}?\nEsta ação não pode ser desfeita.`)) {
+        showMessage("Excluindo venda...", "warning");
+        
+        google.script.run
+          .withSuccessHandler(function(sucesso) {
+            if (sucesso) {
+              showMessage(`Venda ${codigoVenda} excluída com sucesso!`, "success");
+              buscarVendasFiltrado();
+              document.getElementById("detalhesVenda").innerHTML = "";
+            } else {
+              showMessage(`Nenhuma venda encontrada com o código ${codigoVenda}.`, "warning");
+            }
+          })
+          .withFailureHandler(function(erro) {
+            showMessage("Erro ao excluir venda: " + erro.message, "error");
+          })
+          .excluirVenda(codigoVenda);
+      }
+    }
+    
+    function showMessage(text, type) {
+      const statusDiv = document.getElementById("statusMessage");
+      statusDiv.innerHTML = text;
+      statusDiv.className = `status-message ${type}`;
+      statusDiv.style.display = 'block';
+    }
+    
+    window.onload = buscarVendasFiltrado;
+  </script>
+</body>
+</html>
